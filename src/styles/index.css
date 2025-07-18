@@ -1,0 +1,20 @@
+.vertical-navbar {
+    width: 100%;
+    height: 100vh; /* Full height sidebar */
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 20px;
+    border-right: 2px solid #ddd;
+}
+
+.vertical-navbar .nav-link {
+    padding: 10px 15px;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.vertical-navbar .nav-link:hover {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}

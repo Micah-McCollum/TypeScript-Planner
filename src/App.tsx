@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import HomePage from "@pages/HomePage";
 import AboutPage from "@pages/AboutPage";
@@ -9,9 +9,11 @@ import SettingsPage from "@pages/SettingsPage";
 import NotFoundPage from "@pages/NotFoundPage";
 import LoginPage from "@pages/LoginPage";
 import CreateAccountPage from "@pages/CreateAccountPage";
+import Notes from "@pages/Notes";
+import ProtectedRoute from "@shared/components/ProtectedRoute";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import Notes from "@pages/Notes";
+
 
 const App: React.FC = () => {
   return (
@@ -19,11 +21,11 @@ const App: React.FC = () => {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<HomePage />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="calendar" element={<CalendarPage />} />
-        <Route path="finances" element={<FinancesPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
+        <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="login" element={<LoginPage />} />
-        <Route path="notes" element={<Notes />} />
+        <Route path="notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
         <Route path="create-account" element={<CreateAccountPage />} />
       </Route>
 

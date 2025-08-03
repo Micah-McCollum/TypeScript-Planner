@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import Calendar, { CalendarProps } from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Paper, TextField, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, List, ListItem, ListItemText, Paper, TextField, Typography } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { calendarCollection } from "@utils/firestore";
 import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext";
@@ -57,6 +59,13 @@ const CalendarPage: React.FC = () => {
     setEditingEvent(existing);
     setDraftTitle(existing?.title ?? "");
     setDate(d);
+    setModalOpen(true);
+  };
+
+  const openForEdit = (e: Event) => {
+    setEditingEvent(e);
+    setDraftTitle(e.title);
+    setDate(new Date(e.date));
     setModalOpen(true);
   };
 
@@ -115,19 +124,18 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 8 }}>
+    <Box sx={{ p: 8, textAlign: "center" }}>
       <Typography variant="h4" gutterBottom>
         Calendar
       </Typography>
 
+      {/* Calendar widget */}
       <Paper elevation={3} sx={{ maxWidth: 640, mx: "auto", p: 2 }}>
         <Calendar
           onChange={setDate}
           value={date}
           onClickDay={handleDayClick}
-          tileClassName={({ date }) =>
-            isEventDay(date) ? "event-day" : ""
-          }
+          tileClassName={({ date }) => (isEventDay(date) ? "event-day" : "")}
         />
       </Paper>
 
@@ -138,13 +146,60 @@ const CalendarPage: React.FC = () => {
           : (date as Date).toLocaleDateString())}
       </Typography>
 
-      <style>{`
-        .event-day {
-          background: #ffcc00 !important;
-          border-radius: 50%;
-        }
-      `}</style>
+      {/* Readable list of events */}
+      <Box sx={{ mt: 6, maxWidth: 640, mx: "auto", textAlign: "left" }}>
+  <Typography variant="h5" gutterBottom>
+    My Events
+  </Typography>
+  <Divider sx={{ mb: 2 }} />
 
+  {events.length === 0 ? (
+    <Typography>No events yet.</Typography>
+  ) : (
+    <List>
+      {events
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((ev) => (
+          <ListItem
+            key={ev.id}
+            secondaryAction={
+              <>
+                <IconButton edge="end" onClick={() => openForEdit(ev)}>
+                  <EditIcon />
+                </IconButton>
+                <IconButton
+                  edge="end"
+                  onClick={async () => {
+                    await deleteDoc(doc(calendarCollection, ev.id));
+                    setEvents(events.filter((e) => e.id !== ev.id));
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </>
+            }
+          >
+            <ListItemText
+              primary={ev.title}
+              secondary={
+                (() => {
+                  const [y, m, d] = ev.date.split("-");
+                  // construct a local-date so it doesn’t shift by timezone
+                  return new Date(
+                    Number(y),
+                    Number(m) - 1,
+                    Number(d)
+                  ).toLocaleDateString();
+                })()
+              }
+            />
+          </ListItem>
+        ))}
+    </List>
+  )}
+</Box>
+
+      {/* Modal for add/edit */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>
           {editingEvent ? "Edit Event" : "Add Event"} –{" "}
@@ -172,6 +227,13 @@ const CalendarPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <style>{`
+        .event-day {
+          background: #ffcc00 !important;
+          border-radius: 50%;
+        }
+      `}</style>
     </Box>
   );
 };

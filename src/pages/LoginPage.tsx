@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/LoginPage.tsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";

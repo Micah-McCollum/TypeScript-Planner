@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { Container, Row, Col } from "react-bootstrap";
 import Sidebar from "@shared/components/Sidebar";
 import Footer from "@shared/components/Footer";

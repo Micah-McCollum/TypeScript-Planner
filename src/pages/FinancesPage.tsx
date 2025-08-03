@@ -1,7 +1,9 @@
 import React, {useState, useEffect} from "react";
-import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, } from "@mui/material";
-import { financesCollection, fetchAllDocuments } from "../utils/firestore"; 
-import { addDoc } from "firebase/firestore";
+import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Typography, } from "@mui/material";
+import { financesCollection } from "@utils/firestore";
+import { query, where, getDocs, addDoc } from "firebase/firestore";
+import { useAuth } from "@contexts/AuthContext";
+
 
 /**
  * FinancesPage.tsx
@@ -13,7 +15,7 @@ import { addDoc } from "firebase/firestore";
  *  Last updated: 03/02/2025 
  */
 
-// Transaction interface.
+// Transaction interface
 interface Transaction {
   id?: string;
   amount: number;
@@ -22,97 +24,141 @@ interface Transaction {
 }
 
 const FinancesPage: React.FC = () => {
-
-  // State for transactions and form inputs
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  //TODO: Sorting state
-  
-  // Fetch all transactions from Firestore on mount.
+  // Load this user's transactions from Firestore
   useEffect(() => {
-    fetchAllDocuments("finances")
-    .then((docs) => setTransactions(docs as Transaction[]))
-    .catch((error) => console.error("Error fetching documents: ", error));
-  }, []);
-  
-  /**
-   * handleAddTransaction
-   * Validates input, creates a new transaction object, and adds it to Firestore.
-   * @returns {promise<void>} - A promise that resolves when the transaction is added.
-   */
+    if (!user) return;
+    setLoading(true);
+
+    const loadTransactions = async () => {
+      try {
+        const q = query(
+          financesCollection,
+          where("userId", "==", user.uid)
+        );
+        const snapshot = await getDocs(q);
+        const docs = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            amount: data.amount as number,
+            type: data.type as string,
+            date: (data.date as any).toDate(), // Firestore Timestamp → JS Date
+          };
+        });
+        setTransactions(docs);
+      } catch (err) {
+        console.error("Error loading transactions:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTransactions();
+  }, [user]);
+
   const handleAddTransaction = async () => {
-    if (!amount || !type) {
-      alert("Please enter an amount and type.");
+    if (!user) {
+      alert("You must be logged in to add transactions");
       return;
     }
-    const newTransaction: Transaction = { amount: parseFloat(amount), type, date: new Date() };
+    if (!amount || !type) {
+      alert("Please enter both an amount and a type");
+      return;
+    }
+
+    const newTx = {
+      userId: user.uid,
+      amount: parseFloat(amount),
+      type,
+      date: new Date(),
+    };
+
     try {
-      const docRef = await addDoc(financesCollection, newTransaction);
-      newTransaction.id = docRef.id;
-      //copies the current transactions and adds the new transaction
-      setTransactions((prev) => [...prev, newTransaction]);
-      //resets the form inputs
+      const docRef = await addDoc(financesCollection, newTx);
+      setTransactions((prev) => [
+        ...prev,
+        { ...newTx, id: docRef.id },
+      ]);
       setAmount("");
       setType("");
-    } catch (error) {
-      console.error("Error adding transaction: ", error);
+    } catch (err) {
+      console.error("Error adding transaction:", err);
     }
   };
 
   return (
-    // Both headers placed in box
-    <Box sx={{ marginLeft: "240px", padding: "50px", marginBottom: "160px" }}>
-      <h1>Your finances: Income/Expenses </h1>
-      <h2>FINANCES...</h2>
-  <Box sx={{ display: "flex", gap: "16px", marginBottom: "16px"}}>
-      <TextField
-        label="Enter Amount"
-        variant="outlined"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}     // Updates "amount" state as user types
-        type="number"
-      />
-      <FormControl sx={{ minWidth: 120 }}>
-        <InputLabel id = "transaction-type-label">Type</InputLabel>
-        <Select
-          labelId="transaction-type-label"
-          id="transaction-type"
-          value={type}
-          onChange={(e) => setType(e.target.value as string)}    // Updates "type" state as user selects
-        >
-          <MenuItem value="Income">Income</MenuItem>
-          <MenuItem value="Expense">Expense</MenuItem>
-        </Select>
-      </FormControl>
-  
-      <Button variant="contained" onClick={handleAddTransaction}>Add Transaction</Button>
-    </Box>
+    <Box sx={{ marginLeft: "240px", padding: "50px" }}>
+      <Typography variant="h4" gutterBottom>
+        Your Finances: Income &amp; Expenses
+      </Typography>
 
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Amount</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Date</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {transactions.map((transaction) => (
-            <TableRow key={transaction.id}>
-              <TableCell>{transaction.amount}</TableCell>
-              <TableCell>{transaction.type}</TableCell>
-              <TableCell>{transaction.date.toDate().toLocaleString()}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  </Box>
+      {/* Input Form */}
+      <Box sx={{ display: "flex", gap: 2, marginBottom: 4 }}>
+        <TextField
+          label="Amount"
+          variant="outlined"
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <FormControl sx={{ minWidth: 140 }}>
+          <InputLabel id="transaction-type-label">Type</InputLabel>
+          <Select
+            labelId="transaction-type-label"
+            value={type}
+            label="Type"
+            onChange={(e) => setType(e.target.value as string)}
+          >
+            <MenuItem value="Income">Income</MenuItem>
+            <MenuItem value="Expense">Expense</MenuItem>
+          </Select>
+        </FormControl>
+        <Button
+          variant="contained"
+          onClick={handleAddTransaction}
+          disabled={!amount || !type}
+        >
+          Add Transaction
+        </Button>
+      </Box>
+
+      {/* Transactions Table */}
+      {loading ? (
+        <Typography>Loading transactions…</Typography>
+      ) : transactions.length === 0 ? (
+        <Typography>No transactions yet.</Typography>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Amount</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Date</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.map((tx) => (
+                <TableRow key={tx.id}>
+                  <TableCell>${tx.amount.toFixed(2)}</TableCell>
+                  <TableCell>{tx.type}</TableCell>
+                  <TableCell>
+                    {tx.date.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
   );
 };
-
 
 export default FinancesPage;

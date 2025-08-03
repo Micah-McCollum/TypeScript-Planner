@@ -1,27 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { Box, Switch, Typography, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+import { Box, Switch, Typography, Select, MenuItem, FormControl, InputLabel, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@contexts/AuthContext";
 
 // Settings page for User to change accessibility features
 // Includes Dark mode/Font size changes
 // Will store and load user settings based on profile
 const SettingsPage: React.FC = () => {
+  const { signOutUser } = useAuth();
+  const navigate = useNavigate();
+
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [fontSize, setFontSize] = useState<string>("small");
 
   // Load settings for the user on mount
   useEffect(() => {
-    const storedDarkMode = localStorage.getItem("darkMode");
-    const storedFontSize = localStorage.getItem("fontSize");
-
-    if(storedDarkMode) setDarkMode(storedDarkMode === "true");
-    if(storedFontSize) setFontSize(storedFontSize);
+    const storedDark = localStorage.getItem("darkMode");
+    const storedSize = localStorage.getItem("fontSize");
+    if (storedDark) setDarkMode(storedDark === "true");
+    if (storedSize) setFontSize(storedSize);
   }, []);
 
-  // Save settings for the user here
+  // Save settings for the user
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode.toString());
     localStorage.setItem("fontSize", fontSize);
   }, [darkMode, fontSize]);
+
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
 
   return (
     <Box
@@ -38,25 +51,54 @@ const SettingsPage: React.FC = () => {
       </Typography>
 
       {/* Dark Mode Toggle */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, marginBottom: "20px" }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          marginBottom: "20px",
+        }}
+      >
         <Typography>Dark Mode</Typography>
-        <Switch checked={darkMode} onChange={() => setDarkMode((prev) => !prev)} />
+        <Switch
+          checked={darkMode}
+          onChange={() => setDarkMode((prev) => !prev)}
+        />
       </Box>
 
       {/* Font Size Selector */}
-      <FormControl fullWidth>
+      <FormControl fullWidth sx={{ marginBottom: 4 }}>
         <InputLabel>Font Size</InputLabel>
-        <Select value={fontSize} onChange={(e) => setFontSize(e.target.value)}>
-          <MenuItem value="size 14">Small</MenuItem>
-          <MenuItem value="size 18">Medium</MenuItem>
-          <MenuItem value="size 22">Large</MenuItem>
+        <Select
+          value={fontSize}
+          label="Font Size"
+          onChange={(e) => setFontSize(e.target.value)}
+        >
+          <MenuItem value="small">Small</MenuItem>
+          <MenuItem value="medium">Medium</MenuItem>
+          <MenuItem value="large">Large</MenuItem>
         </Select>
       </FormControl>
 
-      {/* Example Text for Font Size Selection */}
-      <Typography sx={{ marginTop: "20px", fontSize: fontSize === "small" ? "14px" : fontSize === "medium" ? "18px" : "22px" }}>
+      {/* Example Text */}
+      <Typography
+        sx={{
+          marginBottom: 4,
+          fontSize:
+            fontSize === "small"
+              ? "14px"
+              : fontSize === "medium"
+              ? "18px"
+              : "22px",
+        }}
+      >
         This is example text showing {fontSize} font size.
       </Typography>
+
+      {/* Log Out Button */}
+      <Button variant="contained" color="error" onClick={handleLogout}>
+        Log Out
+      </Button>
     </Box>
   );
 };

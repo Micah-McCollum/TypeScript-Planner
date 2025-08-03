@@ -1,15 +1,15 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore} from "firebase/firestore";
 
-//Firebase configuration, documentation said okay to have API key here without env variable but can fix if needed
+// Setup for the Firebase connection and DB stored in Env Variable not commmitted
 const firebaseConfig = {
-    apiKey: "AIzaSyC5_zAy0htQQg3uiY5fcaYLm9iWF3XA8oQ",
-    authDomain: "sp25-hotel.firebaseapp.com",
-    projectId: "sp25-hotel",
-    storageBucket: "sp25-hotel.firebasestorage.app",
-    messagingSenderId: "925290704698",
-    appId: "1:925290704698:web:f643e1e00e977bfe21aa03"
-  };
+  apiKey:         import.meta.env.VITE_FIREBASE_API_KEY as string,
+  authDomain:     import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
+  projectId:      import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
+  storageBucket:  import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
+  appId:          import.meta.env.VITE_FIREBASE_APP_ID as string,
+};
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries

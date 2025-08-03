@@ -1,1 +1,8 @@
+# Nodes from Building
 node_modules
+# Environment Vars
+.env
+.env.local
+.env.*.local
+# Local Error Logging
+error.log

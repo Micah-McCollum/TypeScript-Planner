@@ -19,6 +19,28 @@ Also, make sure you have accepted the invitation to join the repo through the e-
 
 Follow these steps to get the project running on your computer.
 
+### **Environment Variable Setup**
+
+This project is built using Firebase. To avoid leaking credentials, use environment variables to load them from a local environment file.
+
+Create a file named .env.local in the project root (same level in directory as the package.json).
+
+Add the following entries, replacing the placeholders with your Firebase config values:
+
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-auth-domain
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+
+Add the local environment variables to the .gitignore
+
+# Local Environment Variables
+.env
+.env.local
+.env.*.local
+
 ### **Clone the Repository**
 
 Open a terminal (or Git Bash) and run:

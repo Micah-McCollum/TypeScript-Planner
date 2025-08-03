@@ -42,7 +42,9 @@ VITE_FIREBASE_APP_ID=your-app-id
 Add the local environment variables to the .gitignore
 # Local Environment Variables
 .env
+
 .env.local
+
 .env.*.local
 
 ### **Clone the Repository**

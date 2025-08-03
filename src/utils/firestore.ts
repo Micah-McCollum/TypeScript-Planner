@@ -1,7 +1,7 @@
 // firestore.ts - Utility functions for Firestore
 import { doc, getDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "./firebase";
-import { Auth, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 // Firebase authentication
 const auth = getAuth();
@@ -76,3 +76,4 @@ export const loginUser = async (email:string, password:string) => {
     throw new Error(error.message);  
   }
 }
+

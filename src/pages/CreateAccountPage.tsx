@@ -1,63 +1,82 @@
 import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@contexts/AuthContext";
+import { createUserProfile } from "@utils/users";
 import "../styles/Authy.css";
 
 const CreateAccountPage: React.FC = () => {
-  // State to Firestore user input
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [confirmPassword, setConfirm] = useState("");
+  const [error, setError]             = useState<string | null>(null);
+  const [loading, setLoading]         = useState(false);
 
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent page reload on form submission
+  const { signUp } = useAuth();
+  const navigate   = useNavigate();
 
-    // Check if passwords match one another
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
     if (password !== confirmPassword) {
-      setError("Passwords do not match!");
+      setError("Passwords don’t match.");
       return;
     }
 
-    // API logic handling
-    console.log("Account created:", { email, password });
+    setLoading(true);
+    try {
+      const user = await signUp(email, password);
 
-    // Reset email or password
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setError("");
-  };
+      // Create corresponding Firestore profile
+      await createUserProfile(user);
+
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+  // Narrow the unknown to an Error if possible:
+  if (err instanceof Error) {
+    setError(err.message);
+  } else {
+    setError("An error occurred during account creation");
+  }
+    }
+  }
 
   return (
     <div className="auth-container">
       <h2>Create Account</h2>
+      {error && <p className="error-message">{error}</p>}
       <form onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)} // Update email
+          onChange={e => setEmail(e.target.value)}
           required
+          disabled={loading}
         />
         <input
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)} // Update password
+          onChange={e => setPassword(e.target.value)}
           required
+          disabled={loading}
         />
         <input
           type="password"
           placeholder="Confirm Password"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)} // Update confirm password
+          onChange={e => setConfirm(e.target.value)}
           required
+          disabled={loading}
         />
-        {error && <p className="error-message">{error}</p>} {/* Display error message */}
-        <button type="submit">Sign Up</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Creating…" : "Sign Up"}
+        </button>
       </form>
       <p>
-        Already have an account? <a href="/login">Log in</a>
+        Already have an account?{" "}
+        <Link to="/login">Log in</Link>
       </p>
     </div>
   );

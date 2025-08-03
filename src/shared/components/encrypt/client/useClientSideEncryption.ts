@@ -1,72 +1,80 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const KEY_NAME = "encryptionKey";
+
 export const useClientSideEncryption = () => {
-    const [key, setKey] = useState<CryptoKey | null>(null);
-    useEffect(() => {
-        (async () => {
-            const storedKey = sessionStorage.getItem(KEY_NAME);
-            if (storedKey) {
-                setKey(await importKey(storedKey));
-            } else {
-                const newKey = await generateKey();
-                setKey(newKey);
-                const exportedKey = await exportKey(newKey);
-                sessionStorage.setItem(KEY_NAME, exportedKey);
-            }
-        })();
-    }, []);
+  const [key, setKey] = useState<CryptoKey | null>(null);
+  const [ready, setReady] = useState(false);
 
-    const generateKey = async (): Promise<CryptoKey> => {
-        return await crypto.subtle.generateKey(
-            { name: "AES-GCM", length: 256 },
-            true,
-            ["encrypt", "decrypt"]
-        );
-    };
+  useEffect(() => {
+    (async () => {
+      const storedKey = sessionStorage.getItem(KEY_NAME);
+      const newKey = storedKey
+        ? await importKey(storedKey)
+        : await generateKey().then(async (k) => {
+            const exported = await exportKey(k);
+            sessionStorage.setItem(KEY_NAME, exported);
+            return k;
+          });
+      setKey(newKey);
+      setReady(true);
+    })();
+  }, []);
 
-    const exportKey = async (key: CryptoKey): Promise<string> => {
-        const rawKey = await crypto.subtle.exportKey("raw", key);
-        return btoa(String.fromCharCode(...new Uint8Array(rawKey)));
-    };
-    const importKey = async (base64Key: string): Promise<CryptoKey> => {
-        const rawKey = Uint8Array.from(atob(base64Key), (c) => c.charCodeAt(0));
-        return await crypto.subtle.importKey(
-            "raw",
-            rawKey,
-            { name: "AES-GCM" },
-            true,
-            ["encrypt", "decrypt"]
-        );
-    };
+  const generateKey = async (): Promise<CryptoKey> =>
+    crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
 
-    const clientSideOnlyEncryptionEncrypt = async (text: string): Promise<string> => {
-        if (!key) throw new Error("WHOOPS!");
-        const encoder = new TextEncoder();
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const encryptedData = await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            key,
-            encoder.encode(text)
-        );
-        const encryptedArray = new Uint8Array(encryptedData);
-        return btoa(String.fromCharCode(...iv, ...encryptedArray));
-    };
+  const exportKey = async (key: CryptoKey): Promise<string> => {
+    const raw = await crypto.subtle.exportKey("raw", key);
+    return btoa(String.fromCharCode(...new Uint8Array(raw)));
+  };
 
-    const clientSideOnlyEncryptionDecrypt = async (encryptedText: string): Promise<string> => {
-        if (!key) throw new Error("OOPS!");
-        const encryptedBytes = Uint8Array.from(atob(encryptedText), (c) => c.charCodeAt(0));
-        const iv = encryptedBytes.slice(0, 12);
-        const data = encryptedBytes.slice(12);
+  const importKey = async (b64: string): Promise<CryptoKey> => {
+    const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, true, [
+      "encrypt",
+      "decrypt",
+    ]);
+  };
 
-        const decryptedData = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv },
-            key,
-            data
-        );
+   const clientSideOnlyEncryptionEncrypt = useCallback(
+    async (text: string) => {
+      if (!key) throw new Error("Key not ready");
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const data = new TextEncoder().encode(text);
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        data
+      );
+      return btoa(String.fromCharCode(...iv, ...new Uint8Array(encrypted)));
+    },
+    [key]
+  );
 
-        return new TextDecoder().decode(decryptedData);
-    };
+  const clientSideOnlyEncryptionDecrypt = useCallback(
+    async (b64: string) => {
+      if (!key) throw new Error("Key not ready");
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const iv = bytes.slice(0, 12);
+      const data = bytes.slice(12);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        key,
+        data
+      );
+      return new TextDecoder().decode(decrypted);
+    },
+    [key]  // only re-create this function when `key` changes
+  );
 
-    return { clientSideOnlyEncryptionEncrypt, clientSideOnlyEncryptionDecrypt };
+  return {
+    clientSideOnlyEncryptionEncrypt,
+    clientSideOnlyEncryptionDecrypt,
+    ready,
+  };
 };

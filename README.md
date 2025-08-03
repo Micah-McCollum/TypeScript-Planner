@@ -1,5 +1,5 @@
 # Project Name
-typescript_planner - Financial Planner Web Application
+TypeScript-Planner - Financial Planner Web Application
 
 # Project Description
 The Financial Planner App is used to manage personal finances, track expenses, set budgets, and set reminders for related events or deadlines.
@@ -24,19 +24,19 @@ Follow these steps to get the project running on your computer.
 Open a terminal (or Git Bash) and run:
 
 ```bash
-cd ~/your-folder  # Navigate to a folder where you want the project
+cd ~/your-folder  # Navigate to any folder where you want the project
 ```
 
 Then clone the repository:
 
 ```bash
-git clone https://github.com/FranklinUniversityCompSciPracticum/SP25_Hotel.git
+git clone https://github.com/Micah-McCollum/TypeScript-Planner.git
 ```
 
 ### **Navigate to the Project Folder**
 
 ```bash
-cd SP25_Hotel
+cd TypeScript-Planner
 ```
 
 ### **Install Dependencies**
@@ -107,7 +107,7 @@ If nothing is returned in the terminal, the server is not running on the selecte
 ##   **Project Structure Overview**
 
 ```
-SP25_Hotel/
+TypeScript-Planner/
 │-- public/             # Static assets
 │-- src/
 │   ├── components/     # Reusable UI components

@@ -1,7 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect} from "react";
-import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Typography, } from "@mui/material";
+import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Typography, IconButton, } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { financesCollection } from "@utils/firestore";
-import { query, where, getDocs, addDoc } from "firebase/firestore";
+import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext";
 
 
@@ -17,115 +21,197 @@ import { useAuth } from "@contexts/AuthContext";
 
 // Transaction interface
 interface Transaction {
-  id?: string;
+  id: string;
   amount: number;
   type: string;
-  date: any;
+  date: Date;
+  description: string;
 }
+
+const COLORS = ["#4caf50", "#f44336"]; // green, red
 
 const FinancesPage: React.FC = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
-  // Load this user's transactions from Firestore
-  useEffect(() => {
+  // load all transactions
+  const loadTransactions = async () => {
     if (!user) return;
     setLoading(true);
+    try {
+      const q = query(financesCollection, where("userId", "==", user.uid));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => {
+        const dt = d.data();
+        return {
+          id: d.id,
+          amount: dt.amount as number,
+          type: dt.type as string,
+          date: (dt.date as any).toDate(),
+          description: (dt.description as string) || "",
+        };
+      });
+      setTransactions(data);
+    } catch (err) {
+      console.error("Error loading transactions:", err);
+    }
+    setLoading(false);
+  };
 
-    const loadTransactions = async () => {
-      try {
-        const q = query(
-          financesCollection,
-          where("userId", "==", user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const docs = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            amount: data.amount as number,
-            type: data.type as string,
-            date: (data.date as any).toDate(), // Firestore Timestamp → JS Date
-          };
-        });
-        setTransactions(docs);
-      } catch (err) {
-        console.error("Error loading transactions:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     loadTransactions();
   }, [user]);
 
-  const handleAddTransaction = async () => {
-    if (!user) {
-      alert("You must be logged in to add transactions");
-      return;
-    }
-    if (!amount || !type) {
-      alert("Please enter both an amount and a type");
-      return;
-    }
+  // compute totals for chart
+  const totalIncome = transactions
+    .filter(t => t.type === "Income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = transactions
+    .filter(t => t.type === "Expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const chartData = [
+    { name: "Income", value: totalIncome },
+    { name: "Expense", value: totalExpense },
+  ];
 
-    const newTx = {
+  // save (add or update)
+  const handleSave = async () => {
+    if (!user || !amount || !type) return;
+    const txData = {
       userId: user.uid,
       amount: parseFloat(amount),
       type,
       date: new Date(),
+      description: description.trim(),
     };
-
     try {
-      const docRef = await addDoc(financesCollection, newTx);
-      setTransactions((prev) => [
-        ...prev,
-        { ...newTx, id: docRef.id },
-      ]);
+      if (editingTx) {
+        const ref = doc(financesCollection, editingTx.id);
+        await updateDoc(ref, {
+          amount: txData.amount,
+          type: txData.type,
+          description: txData.description,
+        });
+        setEditingTx(null);
+      } else {
+        await addDoc(financesCollection, txData);
+      }
       setAmount("");
       setType("");
+      setDescription("");
+      await loadTransactions();
     } catch (err) {
-      console.error("Error adding transaction:", err);
+      console.error("Error saving transaction:", err);
+    }
+  };
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingTx(tx);
+    setAmount(tx.amount.toString());
+    setType(tx.type);
+    setDescription(tx.description);
+  };
+
+  const handleCancel = () => {
+    setEditingTx(null);
+    setAmount("");
+    setType("");
+    setDescription("");
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(financesCollection, id));
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error("Error deleting transaction:", err);
     }
   };
 
   return (
-    <Box sx={{ marginLeft: "240px", padding: "50px" }}>
+    <Box sx={{ ml: "240px", p: 5 }}>
       <Typography variant="h4" gutterBottom>
-        Your Finances: Income &amp; Expenses
+        Your Finances: Income & Expenses
       </Typography>
 
+      {/* Totals & Pie Chart */}
+      <Box sx={{ display: "flex", gap: 4, mb: 4, flexWrap: "wrap" }}>
+        <Paper sx={{ p: 2, flex: 1, minWidth: 200 }}>
+          <Typography variant="h6">Totals</Typography>
+          <Typography>Income:  ${totalIncome.toFixed(2)}</Typography>
+          <Typography>Expense: ${totalExpense.toFixed(2)}</Typography>
+          <Typography>
+            Balance: ${ (totalIncome - totalExpense).toFixed(2) }
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, flex: 1, height: 200, minWidth: 200 }}>
+          <Typography variant="h6" gutterBottom>
+            Income vs Expense
+          </Typography>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={40}
+                outerRadius={60}
+                label
+              >
+                {chartData.map((_, idx) => (
+                  <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Box>
+
       {/* Input Form */}
-      <Box sx={{ display: "flex", gap: 2, marginBottom: 4 }}>
+      <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
         <TextField
           label="Amount"
-          variant="outlined"
           type="number"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={e => setAmount(e.target.value)}
         />
         <FormControl sx={{ minWidth: 140 }}>
-          <InputLabel id="transaction-type-label">Type</InputLabel>
+          <InputLabel>Type</InputLabel>
           <Select
-            labelId="transaction-type-label"
             value={type}
             label="Type"
-            onChange={(e) => setType(e.target.value as string)}
+            onChange={e => setType(e.target.value as string)}
           >
             <MenuItem value="Income">Income</MenuItem>
             <MenuItem value="Expense">Expense</MenuItem>
           </Select>
         </FormControl>
-        <Button
-          variant="contained"
-          onClick={handleAddTransaction}
-          disabled={!amount || !type}
-        >
-          Add Transaction
-        </Button>
+        <TextField
+          label="Description"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          sx={{ minWidth: 200 }}
+        />
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={!amount || !type}
+          >
+            {editingTx ? "Update" : "Add"}
+          </Button>
+          {editingTx && (
+            <Button variant="outlined" onClick={handleCancel}>
+              Cancel
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Transactions Table */}
@@ -138,18 +224,33 @@ const FinancesPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Amount</TableCell>
-                <TableCell>Type</TableCell>
                 <TableCell>Date</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {transactions.map((tx) => (
+              {transactions.map(tx => (
                 <TableRow key={tx.id}>
-                  <TableCell>${tx.amount.toFixed(2)}</TableCell>
+                  <TableCell>{tx.date.toLocaleDateString()}</TableCell>
                   <TableCell>{tx.type}</TableCell>
-                  <TableCell>
-                    {tx.date.toLocaleString()}
+                  <TableCell>${tx.amount.toFixed(2)}</TableCell>
+                  <TableCell>{tx.description}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(tx)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(tx.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}

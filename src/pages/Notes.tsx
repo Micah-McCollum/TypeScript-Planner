@@ -66,6 +66,7 @@ const NotesPage: React.FC = () => {
 
   useEffect(() => {
     loadNotes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, ready, decrypt]);
 
   // Create or update a note

@@ -19,7 +19,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={ <ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="about" element={<AboutPage />} />
         <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />

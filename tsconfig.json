@@ -37,6 +37,9 @@
       ],
       "@shared/*": [
         "src/shared/*"
+      ],
+      "@tests/*": [
+        "__tests__/*"
       ]
     }
   }

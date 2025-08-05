@@ -1,5 +1,6 @@
 /* Tests for ProtectedRouting in the app tests both expected positive and negative responses
- / 
+ / Navigating to "home" should pass if user is logged in, if not navigates to "login"
+ / Confirmed Passing as of 8/4
 */
 import { vi } from "vitest";
 

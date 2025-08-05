@@ -6,3 +6,5 @@ node_modules
 .env.*.local
 # Local Error Logging
 error.log
+# Coverage for tests
+coverage

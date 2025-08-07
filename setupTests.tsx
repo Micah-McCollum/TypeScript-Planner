@@ -3,11 +3,10 @@ import "@testing-library/jest-dom";
 import React from "react";
 import { vi } from "vitest";
 
-// React testing routing
+// React test environment flagging
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
-
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // minimal ResizeObserver stub for Recharts
@@ -30,9 +29,7 @@ vi.mock("react-quill", () => {
 // WOrkaround for the console errors from React Test environment
 const realConsoleError = console.error;
 console.error = (msg?: any, ...args: any[]) => {
-  if (
-    typeof msg === "string" &&
-    msg.includes("not wrapped in act")
+  if (typeof msg === "string" && msg.includes("not wrapped in act")
   ) {
     return;
   }

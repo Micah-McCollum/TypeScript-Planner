@@ -26,22 +26,32 @@ import FinancesPage from "../pages/FinancesPage";
 import { AuthContext } from "@contexts/AuthContext";
 
 const fakeCtx = {
-  user: { uid: "IDX", email: "a@b.com" },
+  user: { uid: "TestUser", email: "TestEmail@Test.com" },
   loading: false,
-} as any;
+} as never;
 
-test("Add button disabled until amount & type", () => {
+test("Add button disabled until amount & type", async () => {
   render(
     <AuthContext.Provider value={fakeCtx}>
       <FinancesPage />
     </AuthContext.Provider>
   );
-  const btn = screen.getByRole("button", { name: /add/i });
-  expect(btn).toBeDisabled();
+  const addBtn = screen.getByRole("button", { name: /add/i });
+  expect(addBtn).toBeDisabled();
 
-  fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: "50" } });
-  expect(btn).toBeDisabled();
+  // fill amount attempt while button should be disable
+  fireEvent.change(screen.getByLabelText(/amount/i), {
+    target: { value: "50" },
+  });
+  expect(addBtn).toBeDisabled();
+  // Simulates interacting with combobox to emulate actual use
+  const combo = screen.getByRole("combobox");
 
-  fireEvent.change(screen.getByLabelText(/type/i), { target: { value: "Income" } });
-  expect(btn).toBeEnabled();
+  fireEvent.mouseDown(combo);
+
+  const expense = await screen.findByText("Expense");
+  fireEvent.click(expense);
+
+  // Add should be enabled after being selected here
+  expect(addBtn).toBeEnabled();
 });

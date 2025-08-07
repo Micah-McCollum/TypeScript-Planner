@@ -154,7 +154,7 @@ const FinancesPage: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Income vs Expense
           </Typography>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
                 data={chartData}

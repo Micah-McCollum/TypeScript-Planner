@@ -32,7 +32,7 @@ vi.mock("@shared/components/encrypt/client/useClientSideEncryption", () => ({
 
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import NotesPage from "../pages/NotesPage";
+import NotesPage from "../pages/Notes";
 import { AuthContext } from "@contexts/AuthContext";
 
 const fakeCtx = {

@@ -8,6 +8,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { calendarCollection } from "@utils/firestore";
 import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext";
+import { FirebaseError } from "firebase/app";
 
 interface Event {
   id: string;
@@ -44,10 +45,16 @@ const CalendarPage: React.FC = () => {
             title: d.data().title as string,
           }))
         );
-      } catch (err) {
-        console.error(err);
+       } catch (err: any) {
+        if (err instanceof FirebaseError && err.code === "permission-denied") {
+          alert("You don’t have permission to view events.");
+        } else {
+          console.error("Error loading events:", err);
+          alert("An error occurred while loading events.");
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     load();
   }, [user]);
@@ -130,7 +137,7 @@ const CalendarPage: React.FC = () => {
       </Typography>
 
       {/* Calendar widget */}
-      <Paper elevation={3} sx={{ maxWidth: 640, mx: "auto", p: 2 }}>
+      <Paper elevation={3} sx={{  p: 1,  alignContent: "center" }}>
         <Calendar
           onChange={setDate}
           value={date}
@@ -147,7 +154,7 @@ const CalendarPage: React.FC = () => {
       </Typography>
 
       {/* Readable list of events */}
-      <Box sx={{ mt: 6, maxWidth: 640, mx: "auto", textAlign: "left" }}>
+      <Box sx={{ mt: 8, maxWidth: 640, mx: "auto", textAlign: "left" }}>
   <Typography variant="h5" gutterBottom>
     My Events
   </Typography>

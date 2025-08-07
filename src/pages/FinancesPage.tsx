@@ -5,8 +5,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { financesCollection } from "@utils/firestore";
-import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext";
+import { FirebaseError } from "firebase/app";
 
 
 /**
@@ -16,7 +17,7 @@ import { useAuth } from "@contexts/AuthContext";
  * - Displays a list of users financial transactions (income/expenses).
  * - Allows user to add a new transaction (amount, type, date).
  * - Fetching and displaying tranasactions from Firestore.
- *  Last updated: 03/02/2025 
+ *  Last updated: 08/06/2025
  */
 
 // Transaction interface
@@ -57,12 +58,18 @@ const FinancesPage: React.FC = () => {
         };
       });
       setTransactions(data);
-    } catch (err) {
-      console.error("Error loading transactions:", err);
-    }
+    } catch (err: any) {
+    if (err instanceof FirebaseError && err.code === "permission-denied") {
+    alert("User lacks permissions to do that");
+  } else {
+    console.error("Error Loading Transactions,", err);
+    alert("Error at Transaction Load-in");
+   }
+  }finally{
     setLoading(false);
+    }
   };
-
+  
   useEffect(() => {
     loadTransactions();
   }, [user]);
@@ -86,7 +93,7 @@ const FinancesPage: React.FC = () => {
       userId: user.uid,
       amount: parseFloat(amount),
       type,
-      date: new Date(),
+      date: serverTimestamp(),
       description: description.trim(),
     };
     try {
@@ -106,9 +113,12 @@ const FinancesPage: React.FC = () => {
       setDescription("");
       await loadTransactions();
     } catch (err) {
-      console.error("Error saving transaction:", err);
-    }
-  };
+    if (err instanceof FirebaseError && err.code === "permission-denied") {
+    alert("User lacks permissions to do that");
+  } else {
+    console.error("Error during attempted Save of Transactions,", err);
+    alert("Transaction Save Error");
+  }}};
 
   const handleEdit = (tx: Transaction) => {
     setEditingTx(tx);
@@ -129,9 +139,12 @@ const FinancesPage: React.FC = () => {
       await deleteDoc(doc(financesCollection, id));
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (err) {
-      console.error("Error deleting transaction:", err);
-    }
-  };
+    if (err instanceof FirebaseError && err.code === "permission-denied") {
+    alert("User lacks permissions to do that");
+  } else {
+    console.error("Error during attempted Delete Transaction,", err);
+    alert("Delete Transaction Error");
+    }}};
 
   return (
     <Box sx={{ ml: "240px", p: 5 }}>
@@ -143,16 +156,16 @@ const FinancesPage: React.FC = () => {
       <Box sx={{ display: "flex", gap: 4, mb: 4, flexWrap: "wrap" }}>
         <Paper sx={{ p: 2, flex: 1, minWidth: 200 }}>
           <Typography variant="h6">Totals</Typography>
-          <Typography>Income:  ${totalIncome.toFixed(2)}</Typography>
-          <Typography>Expense: ${totalExpense.toFixed(2)}</Typography>
+          <Typography>Income Totals:  ${totalIncome.toFixed(2)}</Typography>
+          <Typography>Expense Totals: ${totalExpense.toFixed(2)}</Typography>
           <Typography>
-            Balance: ${ (totalIncome - totalExpense).toFixed(2) }
+            Balance Summation: ${ (totalIncome - totalExpense).toFixed(2) }
           </Typography>
         </Paper>
 
         <Paper sx={{ p: 2, flex: 1, height: 200, minWidth: 200 }}>
           <Typography variant="h6" gutterBottom>
-            Income vs Expense
+            Income vs Expense Items
           </Typography>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>

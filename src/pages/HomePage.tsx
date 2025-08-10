@@ -4,7 +4,9 @@ import {Box, Typography, Paper, List, ListItem, ListItemText } from "@mui/materi
 import { useAuth } from "@contexts/AuthContext";
 import { financesCollection, calendarCollection, notesCollection } from "@utils/firestore";
 import { query, where, getDocs } from "firebase/firestore";
-
+/* HomePage is the landing page after logging in, provides widgets of different data for the User
+ * 
+*/
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   const [totals, setTotals] = useState({ income: 0, expense: 0 });

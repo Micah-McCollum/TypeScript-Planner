@@ -30,6 +30,7 @@ const CalendarPage: React.FC = () => {
   // load events on mount / user change
   useEffect(() => {
     if (!user) {
+      setEvents([]);
       setLoading(false);
       return;
     }
@@ -45,9 +46,9 @@ const CalendarPage: React.FC = () => {
             title: d.data().title as string,
           }))
         );
-       } catch (err: any) {
+      } catch (err: any) {
         if (err instanceof FirebaseError && err.code === "permission-denied") {
-          alert("You don’t have permission to view events.");
+          alert("User doesn't have permission to view events.");
         } else {
           console.error("Error loading events:", err);
           alert("An error occurred while loading events.");
@@ -61,6 +62,10 @@ const CalendarPage: React.FC = () => {
 
   // open modal to add or edit
   const handleDayClick = (d: Date) => {
+    if (!user) {
+      alert("Please log in to add or edit events.");
+      return;
+    }
     const iso = d.toISOString().split("T")[0];
     const existing = events.find(e => e.date === iso) || null;
     setEditingEvent(existing);
@@ -70,6 +75,10 @@ const CalendarPage: React.FC = () => {
   };
 
   const openForEdit = (e: Event) => {
+    if (!user) {
+      alert("Please log in to edit events.");
+      return;
+    }
     setEditingEvent(e);
     setDraftTitle(e.title);
     setDate(new Date(e.date));
@@ -77,15 +86,16 @@ const CalendarPage: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      alert("Please log in to save events.");
+      return;
+    }
     const iso = (date as Date).toISOString().split("T")[0];
     try {
       if (editingEvent) {
-        // update
         const ref = doc(calendarCollection, editingEvent.id);
         await updateDoc(ref, { title: draftTitle });
       } else {
-        // create
         await addDoc(calendarCollection, {
           userId: user.uid,
           date: iso,
@@ -102,19 +112,32 @@ const CalendarPage: React.FC = () => {
           title: d.data().title as string,
         }))
       );
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err instanceof FirebaseError && err.code === "permission-denied") {
+        alert("You don’t have permission to save this event.");
+      } else {
+        console.error("Error saving event:", err);
+        alert("An error occurred while saving the event.");
+      }
     }
     setModalOpen(false);
   };
 
   const handleDelete = async () => {
-    if (!editingEvent) return;
+    if (!user || !editingEvent) {
+      alert("Please log in to delete events.");
+      return;
+    }
     try {
       await deleteDoc(doc(calendarCollection, editingEvent.id));
       setEvents(events.filter(e => e.id !== editingEvent.id));
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err instanceof FirebaseError && err.code === "permission-denied") {
+        alert("You don’t have permission to delete this event.");
+      } else {
+        console.error("Error deleting event:", err);
+        alert("An error occurred while deleting the event.");
+      }
     }
     setModalOpen(false);
   };
@@ -130,6 +153,14 @@ const CalendarPage: React.FC = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <Box sx={{ p: 8 }}>
+        <Typography>Please log in to view your calendar.</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 8, textAlign: "center" }}>
       <Typography variant="h4" gutterBottom>
@@ -137,7 +168,7 @@ const CalendarPage: React.FC = () => {
       </Typography>
 
       {/* Calendar widget */}
-      <Paper elevation={3} sx={{  p: 1,  alignContent: "center" }}>
+      <Paper elevation={3} sx={{ maxWidth: 640, mx: "auto", p: 2 }}>
         <Calendar
           onChange={setDate}
           value={date}
@@ -146,70 +177,59 @@ const CalendarPage: React.FC = () => {
         />
       </Paper>
 
-      <Typography sx={{ mt: 2, textAlign: "center" }}>
-        Selected Date:{" "}
-        {(Array.isArray(date)
+      <Typography sx={{ mt: 2 }}>
+        Selected Date: {Array.isArray(date)
           ? date.map(d => (d as Date).toLocaleDateString()).join(" – ")
-          : (date as Date).toLocaleDateString())}
+          : (date as Date).toLocaleDateString()}
       </Typography>
 
       {/* Readable list of events */}
-      <Box sx={{ mt: 8, maxWidth: 640, mx: "auto", textAlign: "left" }}>
-  <Typography variant="h5" gutterBottom>
-    My Events
-  </Typography>
-  <Divider sx={{ mb: 2 }} />
+      <Box sx={{ mt: 6, maxWidth: 640, mx: "auto", textAlign: "left" }}>
+        <Typography variant="h5" gutterBottom>
+          My Events
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
 
-  {events.length === 0 ? (
-    <Typography>No events yet.</Typography>
-  ) : (
-    <List>
-      {events
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((ev) => (
-          <ListItem
-            key={ev.id}
-            secondaryAction={
-              <>
-                <IconButton edge="end" onClick={() => openForEdit(ev)}>
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  edge="end"
-                  onClick={async () => {
-                    await deleteDoc(doc(calendarCollection, ev.id));
-                    setEvents(events.filter((e) => e.id !== ev.id));
-                  }}
+        {events.length === 0 ? (
+          <Typography>No events yet.</Typography>
+        ) : (
+          <List>
+            {events
+              .sort((a, b) => a.date.localeCompare(b.date))
+              .map(ev => (
+                <ListItem
+                  key={ev.id}
+                  secondaryAction={
+                    <>
+                      <IconButton edge="end" onClick={() => openForEdit(ev)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton edge="end" onClick={handleDelete}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </>
+                  }
                 >
-                  <DeleteIcon />
-                </IconButton>
-              </>
-            }
-          >
-            <ListItemText
-              primary={ev.title}
-              secondary={
-                (() => {
-                  const [y, m, d] = ev.date.split("-");
-                  // construct a local-date so it doesn’t shift by timezone
-                  return new Date(
-                    Number(y),
-                    Number(m) - 1,
-                    Number(d)
-                  ).toLocaleDateString();
-                })()
-              }
-            />
-          </ListItem>
-        ))}
-    </List>
-  )}
-</Box>
+                  <ListItemText
+                    primary={ev.title}
+                    secondary={
+                      new Date(
+                        ...ev.date.split("-").map((v, i) =>
+                          i === 1 ? Number(v) - 1 : Number(v)
+                        )
+                      ).toLocaleDateString()
+                    }
+                  />
+                </ListItem>
+              ))}
+          </List>
+        )}
+      </Box>
 
       {/* Modal for add/edit */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>
-          {editingEvent ? "Edit Event" : "Add Event"} –{" "}
+          {editingEvent ? "Edit Event" : "Add Event"} – {" "}
           {(date as Date).toLocaleDateString()}
         </DialogTitle>
         <DialogContent>

@@ -36,7 +36,7 @@
         "utils/*"
       ],
       "@shared/*": [
-        "src/shared/*"
+        "shared/*"
       ],
       "@tests/*": [
         "__tests__/*"

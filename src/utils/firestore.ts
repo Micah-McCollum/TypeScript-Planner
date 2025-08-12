@@ -11,6 +11,7 @@ const auth = getAuth();
 export const financesCollection = collection(db, "finances");
 export const notesCollection = collection(db, "notes");
 export const calendarCollection = collection(db, "calendar");
+export const notificationsCollection = collection(db, "notifications");
 
 // fetchDocument - returns a single doc by the docId
 // @param {string} collectionName - Chooses name of collection to query
@@ -67,6 +68,9 @@ export const registerUser = async (email:string, password:string) => {
   }
 };
 
+// loginUser - Checks against stored credentials to log a User into their account
+// @param {string} email - email associated with user profile added
+// @param {string} password - password associated with user profile added
 export const loginUser = async (email:string, password:string) => {
   try{
     const userCredenentials = await signInWithEmailAndPassword(auth, email, password);

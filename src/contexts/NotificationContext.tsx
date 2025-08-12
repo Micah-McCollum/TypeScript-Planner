@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { query, where, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { notificationsCollection } from "@utils/firestore";
 import { useAuth } from "./AuthContext";
-
+// Context and Collection setup for notifications to the User   
 interface Notification { id: string; title: string; body: string; link?: string; timestamp: Date; read: boolean; }
 interface ContextValue {
   notifications: Notification[];

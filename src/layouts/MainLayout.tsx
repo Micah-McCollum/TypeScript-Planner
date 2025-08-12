@@ -4,6 +4,8 @@ import { Container, Row, Col } from "react-bootstrap";
 import Sidebar from "@shared/components/Sidebar";
 import Footer from "@shared/components/Footer";
 
+
+
 const MainLayout: React.FC = () => {
     return (
         <Container fluid className="d-flex flex-column min-vh-100">
@@ -12,9 +14,9 @@ const MainLayout: React.FC = () => {
                      <Sidebar />
                 </Col>
                 
-                    <Col md={10} className="p-4 overflow-auto">
-                    <Outlet />
-                </Col>
+                    <Col md={10} className="overflow-auto" style={{ padding: "24px", paddingTop: 88 }}>
+  <Outlet />
+</Col>
             </Row>
             <Row>
                 <Col>

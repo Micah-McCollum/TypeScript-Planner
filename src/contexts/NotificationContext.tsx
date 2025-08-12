@@ -1,18 +1,29 @@
+// src/contexts/NotificationContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { query, where, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { notificationsCollection } from "@utils/firestore";
 import { useAuth } from "./AuthContext";
-// Context and Collection setup for notifications to the User   
-interface Notification { id: string; title: string; body: string; link?: string; timestamp: Date; read: boolean; }
-interface ContextValue {
+import { FirebaseError } from "firebase/app";
+
+type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  link?: string;
+  timestamp: Date;
+  read: boolean;
+};
+
+type Ctx = {
   notifications: Notification[];
-  markRead: (id: string) => Promise<void>;
   unreadCount: number;
-}
+  markRead: (id: string) => Promise<void>;
+};
 
-const NotificationContext = createContext<ContextValue|null>(null);
+const NotificationContext = createContext<Ctx | undefined>(undefined);
+type Props = { children: React.ReactNode };
 
-export const NotificationProvider: React.FC = ({ children }) => {
+export default function NotificationProvider({ children }: Props) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -21,18 +32,50 @@ export const NotificationProvider: React.FC = ({ children }) => {
       setNotifications([]);
       return;
     }
+
+    if (!notificationsCollection) {
+      console.error("notificationsCollection is undefined");
+      return;
+    }
+
     const q = query(
       notificationsCollection,
       where("userId", "==", user.uid),
       where("read", "==", false)
     );
-    const unsub = onSnapshot(q, snap => {
-      setNotifications(snap.docs.map(d => ({
-        id: d.id,
-        ...(d.data() as any),
-        timestamp: (d.data() as any).timestamp.toDate(),
-      })));
-    });
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const next = snap.docs.map((d) => {
+          const data = d.data() as any;
+          let ts: Date = new Date();
+          try {
+            ts = data.timestamp?.toDate?.() ?? new Date();
+          } catch {
+            // leave default
+          }
+          return {
+            id: d.id,
+            title: data.title ?? "",
+            body: data.body ?? "",
+            link: data.link,
+            read: Boolean(data.read),
+            timestamp: ts,
+          } as Notification;
+        });
+        setNotifications(next);
+      },
+      (err) => {
+        if (err instanceof FirebaseError && err.code === "permission-denied") {
+          console.warn("Permission denied for notifications; check Firestore rules.");
+          setNotifications([]); // clear rather than crash
+        } else {
+          console.error("onSnapshot(notifications) failed:", err);
+        }
+      }
+    );
+
     return unsub;
   }, [user]);
 
@@ -42,19 +85,15 @@ export const NotificationProvider: React.FC = ({ children }) => {
 
   return (
     <NotificationContext.Provider
-      value={{
-        notifications,
-        markRead,
-        unreadCount: notifications.length,
-      }}
+      value={{ notifications, unreadCount: notifications.length, markRead }}
     >
       {children}
     </NotificationContext.Provider>
   );
-};
+}
 
-export const useNotifications = () => {
+export function useNotifications() {
   const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error("useNotifications must be inside <NotificationProvider>");
+  if (!ctx) throw new Error("useNotifications must be used within NotificationProvider");
   return ctx;
-};
+}

@@ -32,21 +32,34 @@ service cloud.firestore {
                                  && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
-    
+    }
 		// Calendar
     match /calendar/{calendarId} {
       allow read, update, delete: if request.auth != null
                                  && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
-    }
+    
+		}
+		// Events
+	    match /events/{eventId} {
+      allow read, update, delete: if request.auth != null
+                                 && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+		}
 
-//    match /events/{eventId} {
- //     allow read, update, delete: if request.auth != null
-//                                 && resource.data.userId == request.auth.uid;
-//      allow create: if request.auth != null
-//                    && request.resource.data.userId == request.auth.uid;
+    // Notifications
+    match /notifications/{id} {
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
-  }
+ 
+
+
+  
 }
+
 }
+
+    

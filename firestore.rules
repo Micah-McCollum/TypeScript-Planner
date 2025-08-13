@@ -27,6 +27,7 @@ service cloud.firestore {
                     && request.resource.data.userId == request.auth.uid;
     }
 		
+    // Budgets
     match /budgets/{budgetId} {
       allow read, update, delete: if request.auth != null
                                  && resource.data.userId == request.auth.uid;

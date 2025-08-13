@@ -55,7 +55,7 @@ const LoginPage: React.FC = () => {
         </button>
       </form>
       <p>
-        Don't have an account? <Link to="/create-account">Sign up</Link>
+        Don't have an account? <Link to="/createaccount">Sign up</Link>
       </p>
     </div>
   );

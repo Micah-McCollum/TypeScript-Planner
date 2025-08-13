@@ -26,7 +26,7 @@ const App: React.FC = () => {
         <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="login" element={<LoginPage />} />
         <Route path="notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
-        <Route path="create-account" element={<CreateAccountPage />} />
+        <Route path="createaccount" element={<CreateAccountPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

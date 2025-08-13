@@ -49,7 +49,7 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   alignItems: "center",
   justifyContent: "flex-end",
   padding: theme.spacing(0, 1),
-  ...theme.mixins.toolbar, // ensures content below clears the AppBar
+  ...theme.mixins.toolbar, 
 }));
 
 interface AppBarProps extends MuiAppBarProps {

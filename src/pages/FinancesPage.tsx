@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect} from "react";
-import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Typography, IconButton, } from "@mui/material";
+import { Box, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Typography, IconButton, LinearProgress, } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { financesCollection } from "@utils/firestore";
-import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { financesCollection, budgetsCollection } from "@utils/firestore";
+import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext";
 import { FirebaseError } from "firebase/app";
 
@@ -89,7 +89,7 @@ const FinancesPage: React.FC = () => {
     { name: "Income", value: totalIncome },
     { name: "Expense", value: totalExpense },
   ];
-
+3
   /**
    * Create or update a transaction.
    * Uses a server timestamp for `date` to avoid client clock drift.
@@ -164,6 +164,60 @@ const FinancesPage: React.FC = () => {
     }
   };
 
+  const monthKey = new Date().toISOString().slice(0, 7);
+
+const [budgetLimit, setBudgetLimit] = useState<number | null>(null);
+const [savingBudget, setSavingBudget] = useState(false);
+const [budgetInput, setBudgetInput] = useState<string>("");
+
+// Sum of THIS MONTH's expenses only
+const expenseThisMonth = transactions
+  .filter(t => t.type === "Expense" && t.date.toISOString().slice(0,7) === monthKey)
+  .reduce((s, t) => s + t.amount, 0);
+
+// Load current month budget on user/transactions change
+useEffect(() => {
+  const loadBudget = async () => {
+    if (!user) return;
+    const id = `${user.uid}_${monthKey}`;
+    const ref = doc(budgetsCollection, id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as any;
+      setBudgetLimit(Number(data.limit) || 0);
+      setBudgetInput(String(data.limit ?? ""));
+    } else {
+      setBudgetLimit(null);
+      setBudgetInput("");
+    }
+  };
+  loadBudget();
+}, [user, monthKey, transactions]);
+
+const saveBudget = async () => {
+  if (!user) return;
+  const val = Number(budgetInput);
+  if (Number.isNaN(val) || val < 0) return alert("Enter a valid non-negative number.");
+  setSavingBudget(true);
+  try {
+    const id = `${user.uid}_${monthKey}`;
+    const ref = doc(budgetsCollection, id);
+    await setDoc(ref, {
+      userId: user.uid,
+      month: monthKey,
+      limit: val,
+      updatedAt: new Date()
+    }, { merge: true });
+    setBudgetLimit(val);
+  } catch (e) {
+    console.error("Saving budget failed", e);
+    alert("Could not save budget");
+  } finally {
+    setSavingBudget(false);
+  }
+};
+
+
   return (
     <Box sx={{ ml: "240px", p: 5 }}>
       <Typography variant="h4" gutterBottom>
@@ -180,6 +234,76 @@ const FinancesPage: React.FC = () => {
             Balance Summation: ${ (totalIncome - totalExpense).toFixed(2) }
           </Typography>
         </Paper>
+
+        {/* Monthly Budget */}
+<Paper sx={{ p: 2, flex: 1, minWidth: 260 }}>
+  <Typography variant="h6">Monthly Budget</Typography>
+  <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
+    {monthKey}
+  </Typography>
+
+  {budgetLimit == null ? (
+    <>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        No budget set for this month.
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <TextField
+          size="small"
+          label="Set budget ($)"
+          value={budgetInput}
+          onChange={(e) => setBudgetInput(e.target.value)}
+          type="number"
+        />
+        <Button variant="contained" onClick={saveBudget} disabled={savingBudget || !budgetInput}>
+          Save
+        </Button>
+      </Box>
+    </>
+  ) : (
+    <>
+      <Typography>Limit: ${budgetLimit.toFixed(2)}</Typography>
+      <Typography>Spent: ${expenseThisMonth.toFixed(2)}</Typography>
+      <Typography>
+        Remaining: ${Math.max(0, budgetLimit - expenseThisMonth).toFixed(2)}
+      </Typography>
+
+      {/* Progress */}
+      <Box sx={{ mt: 1 }}>
+        <LinearProgress
+          variant="determinate"
+          value={Math.min(100, (expenseThisMonth / Math.max(1, budgetLimit)) * 100)}
+          sx={{
+            height: 8,
+            borderRadius: 1,
+            "& .MuiLinearProgress-bar": {
+              bgcolor:
+                expenseThisMonth > budgetLimit
+                  ? "error.main"
+                  : expenseThisMonth >= budgetLimit * 0.9
+                  ? "warning.main"
+                  : "primary.main",
+            },
+          }}
+        />
+      </Box>
+
+      {/* Edit */}
+      <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+        <TextField
+          size="small"
+          label="Edit budget ($)"
+          value={budgetInput}
+          onChange={(e) => setBudgetInput(e.target.value)}
+          type="number"
+        />
+        <Button variant="outlined" onClick={saveBudget} disabled={savingBudget}>
+          Update
+        </Button>
+      </Box>
+    </>
+  )}
+</Paper>
 
         <Paper sx={{ p: 2, flex: 1, height: 200, minWidth: 200 }}>
           <Typography variant="h6" gutterBottom>

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// firestore.ts - Utility functions for Firestore
+
+// firestore.ts - Utility functions for Firestore usage
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
@@ -12,6 +13,7 @@ export const financesCollection = collection(db, "finances");
 export const notesCollection = collection(db, "notes");
 export const calendarCollection = collection(db, "calendar");
 export const notificationsCollection = collection(db, "notifications");
+export const budgetsCollection = collection(db, "budgets");
 
 // fetchDocument - returns a single doc by the docId
 // @param {string} collectionName - Chooses name of collection to query

@@ -5,6 +5,15 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@contexts/AuthContext";
 import "../styles/Authy.css";
 
+/**
+ * LoginPage.tsx
+ *
+ * Handles email/password sign-in using the Auth context.
+ * UX: minimal form with loading state and inline error display.
+ * Security: credentials are passed to Firebase Auth; no passwords stored locally.
+ * Error handling: shows provider error messages; prevents double submits with a loading flag.
+ */
+
 const LoginPage: React.FC = () => {
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");

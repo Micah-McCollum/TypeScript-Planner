@@ -8,6 +8,17 @@ import { notesCollection } from "@utils/firestore";
 import {query, where, getDocs, addDoc, updateDoc, deleteDoc, doc,} from "firebase/firestore";
 import { useAuth } from "@contexts/AuthContext"
 
+/**
+ * NotesPage.tsx
+ *
+ * Manages per-user notes with **client-side AES-GCM encryption**.
+ * Features: list, create, edit, delete; decrypt-on-read and encrypt-on-write.
+ * Security: all reads/writes are scoped by `userId` and validated by Firestore rules;
+ *           ciphertext is stored in Firestore—plaintext never leaves the client.
+ * Error handling: logs failures and continues rendering where possible (best-effort decrypt).
+ * UI: ReactQuill rich-text editor; MUI layout/components.
+ */
+
 interface Note {
   id: string;
   subject: string;
@@ -28,7 +39,7 @@ const NotesPage: React.FC = () => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Load & decrypt this user's notes, but never abort on a single failure
+  // Load & decrypt this user's notes, but one at a time without 1 failure aborting entirely
   const loadNotes = async () => {
     if (!user || !ready) {
       setLoading(false);

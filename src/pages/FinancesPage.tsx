@@ -9,27 +9,27 @@ import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimesta
 import { useAuth } from "@contexts/AuthContext";
 import { FirebaseError } from "firebase/app";
 
-
 /**
  * FinancesPage.tsx
- * 
- * A page to manage income and expenses. React, MUI, for UI components.  
- * - Displays a list of users financial transactions (income/expenses).
- * - Allows user to add a new transaction (amount, type, date).
- * - Fetching and displaying tranasactions from Firestore.
- *  Last updated: 08/06/2025
+ *
+ * Manages per-user income and expense transactions backed by Firestore.
+ * Features: list, add, edit, delete; live totals; pie chart visualization.
+ * Security: all queries/writes are user-scoped via `userId`; rules enforce ownership.
+ * Error handling: surfaces permission errors; logs unexpected failures.
+ * UI: MUI components; Recharts for the pie chart.
  */
 
-// Transaction interface
+// Transaction shape stored/rendered for the table and chart
 interface Transaction {
   id: string;
   amount: number;
-  type: string;
-  date: Date;
+  type: string;   // "Income" | "Expense"
+  date: Date;     // derived from Firestore Timestamp
   description: string;
 }
 
-const COLORS = ["#4caf50", "#f44336"]; // green, red
+// Pie colors: income (green), expense (red)
+const COLORS = ["#4caf50", "#f44336"];
 
 const FinancesPage: React.FC = () => {
   const { user } = useAuth();
@@ -40,7 +40,10 @@ const FinancesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
-  // load all transactions
+  /**
+   * Fetch the current user's transactions from Firestore.
+   * Applies a userId filter to align with security rules.
+   */
   const loadTransactions = async () => {
     if (!user) return;
     setLoading(true);
@@ -53,28 +56,29 @@ const FinancesPage: React.FC = () => {
           id: d.id,
           amount: dt.amount as number,
           type: dt.type as string,
+          // Firestore Timestamp -> Date for rendering
           date: (dt.date as any).toDate(),
           description: (dt.description as string) || "",
         };
       });
       setTransactions(data);
     } catch (err: any) {
-    if (err instanceof FirebaseError && err.code === "permission-denied") {
-    alert("User lacks permissions to do that");
-  } else {
-    console.error("Error Loading Transactions,", err);
-    alert("Error at Transaction Load-in");
-   }
-  }finally{
-    setLoading(false);
+      if (err instanceof FirebaseError && err.code === "permission-denied") {
+        alert("User lacks permissions to do that");
+      } else {
+        console.error("Error Loading Transactions,", err);
+        alert("Error at Transaction Load-in");
+      }
+    } finally {
+      setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     loadTransactions();
   }, [user]);
 
-  // compute totals for chart
+  // Derived totals for the summary cards and pie chart
   const totalIncome = transactions
     .filter(t => t.type === "Income")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -86,7 +90,10 @@ const FinancesPage: React.FC = () => {
     { name: "Expense", value: totalExpense },
   ];
 
-  // save (add or update)
+  /**
+   * Create or update a transaction.
+   * Uses a server timestamp for `date` to avoid client clock drift.
+   */
   const handleSave = async () => {
     if (!user || !amount || !type) return;
     const txData = {
@@ -108,18 +115,22 @@ const FinancesPage: React.FC = () => {
       } else {
         await addDoc(financesCollection, txData);
       }
+      // Reset form and refresh list
       setAmount("");
       setType("");
       setDescription("");
       await loadTransactions();
     } catch (err) {
-    if (err instanceof FirebaseError && err.code === "permission-denied") {
-    alert("User lacks permissions to do that");
-  } else {
-    console.error("Error during attempted Save of Transactions,", err);
-    alert("Transaction Save Error");
-  }}};
+      if (err instanceof FirebaseError && err.code === "permission-denied") {
+        alert("User lacks permissions to do that");
+      } else {
+        console.error("Error during attempted Save of Transactions,", err);
+        alert("Transaction Save Error");
+      }
+    }
+  };
 
+  // Populate the form with the selected row's values for editing
   const handleEdit = (tx: Transaction) => {
     setEditingTx(tx);
     setAmount(tx.amount.toString());
@@ -127,6 +138,7 @@ const FinancesPage: React.FC = () => {
     setDescription(tx.description);
   };
 
+  // Reset form and exit edit mode
   const handleCancel = () => {
     setEditingTx(null);
     setAmount("");
@@ -134,17 +146,23 @@ const FinancesPage: React.FC = () => {
     setDescription("");
   };
 
+  /**
+   * Delete a transaction by document id.
+   * Optimistically updates local state after Firestore delete.
+   */
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(financesCollection, id));
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (err) {
-    if (err instanceof FirebaseError && err.code === "permission-denied") {
-    alert("User lacks permissions to do that");
-  } else {
-    console.error("Error during attempted Delete Transaction,", err);
-    alert("Delete Transaction Error");
-    }}};
+      if (err instanceof FirebaseError && err.code === "permission-denied") {
+        alert("User lacks permissions to do that");
+      } else {
+        console.error("Error during attempted Delete Transaction,", err);
+        alert("Delete Transaction Error");
+      }
+    }
+  };
 
   return (
     <Box sx={{ ml: "240px", p: 5 }}>
@@ -152,7 +170,7 @@ const FinancesPage: React.FC = () => {
         Your Finances: Income & Expenses
       </Typography>
 
-      {/* Totals & Pie Chart */}
+      {/* Summary cards & pie chart */}
       <Box sx={{ display: "flex", gap: 4, mb: 4, flexWrap: "wrap" }}>
         <Paper sx={{ p: 2, flex: 1, minWidth: 200 }}>
           <Typography variant="h6">Totals</Typography>
@@ -186,7 +204,7 @@ const FinancesPage: React.FC = () => {
         </Paper>
       </Box>
 
-      {/* Input Form */}
+      {/* Entry form */}
       <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
         <TextField
           label="Amount"
@@ -227,7 +245,7 @@ const FinancesPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Transactions Table */}
+      {/* Transactions table */}
       {loading ? (
         <Typography>Loading transactions…</Typography>
       ) : transactions.length === 0 ? (

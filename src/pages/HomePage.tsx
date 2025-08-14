@@ -5,6 +5,16 @@ import { useAuth } from "@contexts/AuthContext";
 import { financesCollection, calendarCollection, notesCollection } from "@utils/firestore";
 import { query, where, getDocs } from "firebase/firestore";
 
+/**
+ * HomePage.tsx
+ *
+ * Authenticated landing page that aggregates per-user data:
+ * - Finances summary (income, expenses, balance)
+ * - Notes count
+ * - Upcoming calendar events (next 5)
+ * UI: MUI papers used for widgets based on data in the other main pages
+ */
+
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   const [totals, setTotals] = useState({ income: 0, expense: 0 });

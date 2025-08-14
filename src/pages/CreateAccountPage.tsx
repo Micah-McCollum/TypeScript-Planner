@@ -4,6 +4,15 @@ import { useAuth } from "@contexts/AuthContext";
 import { createUserProfile } from "@utils/users";
 import "../styles/Authy.css";
 
+/**
+ * CreateAccountPage.tsx
+ *
+ * Handles email/password sign-up and post-signup profile creation in Firestore.
+ * UX: basic form with password confirmation, loading state, and inline errors.
+ * Security: passwords are sent only to Firebase Auth; profile doc is user-scoped by UID.
+ * Error handling: validates password confirmation; narrows unknown errors for safe messaging.
+ */
+
 const CreateAccountPage: React.FC = () => {
   const [email, setEmail]             = useState("");
   const [password, setPassword]       = useState("");

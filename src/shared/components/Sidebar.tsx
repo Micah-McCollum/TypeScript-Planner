@@ -3,8 +3,7 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { styled, useTheme, Theme, CSSObject } from "@mui/material/styles";
-import {
-  Box, CssBaseline, Divider, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Popover, Badge } from "@mui/material";
+import { Box, CssBaseline, Divider, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Popover, Badge } from "@mui/material";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
 import MuiDrawer from "@mui/material/Drawer";
 
@@ -21,6 +20,13 @@ import { FaCalendarAlt } from "react-icons/fa";
 
 import { useNotifications } from "@contexts/NotificationContext";
 
+
+/* Sidebar.tsx
+*  Includes the main GUI components for the app
+*  Main extension bar includes links to other pages next to their icons/names
+*  Notification icon displays notifications when needed
+* 
+*/
 const drawerWidth = 240;
 
 const openedMixin = (theme: Theme): CSSObject => ({

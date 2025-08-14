@@ -2,9 +2,8 @@ import { Box, Typography, Button } from "@mui/material";
 import { useAuth } from "@contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-// Settings page for User to change accessibility features
-// Includes Dark mode/Font size changes
-// Will store and load user settings based on profile
+// Settings page for User allowing logging out of profile, then directs to the login page
+
 const SettingsPage: React.FC = () => {
   const { signOutUser, user } = useAuth();
   const navigate = useNavigate();

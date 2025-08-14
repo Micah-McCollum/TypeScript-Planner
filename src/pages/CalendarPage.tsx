@@ -10,24 +10,45 @@ import { query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from "fireba
 import { useAuth } from "@contexts/AuthContext";
 import { FirebaseError } from "firebase/app";
 
+/**
+ * CalendarPage.tsx
+ *
+ * Manages per-user calendar events backed by Firestore.
+ * Features: highlight days with events, modal CRUD for a selected date, and a readable event list.
+ * Security: all reads/writes are scoped by `userId` and enforced by Firestore rules.
+ * Error handling: shows permission errors and logs unexpected failures.
+ * UI: react-calendar for the grid; MUI for modal, list, and buttons.
+ */
+
+// Event shape used across UI and Firestore mapping.
+// ` date` is stored as a local, calendar-only string: "YYYY-MM-DD"
 interface Event {
   id: string;
-  date: string;      // "YYYY-MM-DD"
+  date: string; // "YYYY-MM-DD"
   title: string;
 }
 
 const CalendarPage: React.FC = () => {
   const { user } = useAuth();
+
+  // Selected date in the calendar (react-calendar value)
   const [date, setDate] = useState<CalendarProps["value"]>(new Date());
+
+  // Event list for the current user
   const [events, setEvents] = useState<Event[]>([]);
+
+  // Initial load / refetch state
   const [loading, setLoading] = useState(true);
 
-  // dialog state
+  // Dialog state for add/edit flow
   const [modalOpen, setModalOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
-  // load events on mount / user change
+  /**
+   * Load events whenever the authenticated user changes.
+   * Applies `userId` filter to align with security rules.
+   */
   useEffect(() => {
     if (!user) {
       setEvents([]);
@@ -60,7 +81,10 @@ const CalendarPage: React.FC = () => {
     load();
   }, [user]);
 
-  // open modal to add or edit
+  /**
+   * Begin add/edit for the clicked day.
+   * If an event already exists for that date, preload it for editing.
+   */
   const handleDayClick = (d: Date) => {
     if (!user) {
       alert("Please log in to add or edit events.");
@@ -74,6 +98,9 @@ const CalendarPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  /**
+   * Open the modal pre-populated with an existing event (from the list).
+   */
   const openForEdit = (e: Event) => {
     if (!user) {
       alert("Please log in to edit events.");
@@ -85,6 +112,10 @@ const CalendarPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  /**
+   * Create a new event for the selected date or update the currently edited one.
+   * After a successful write, reload the user's events to refresh the UI.
+   */
   const handleSave = async () => {
     if (!user) {
       alert("Please log in to save events.");
@@ -102,7 +133,7 @@ const CalendarPage: React.FC = () => {
           title: draftTitle,
         });
       }
-      // reload
+      // Reload events after create/update
       const q = query(calendarCollection, where("userId", "==", user.uid));
       const snap = await getDocs(q);
       setEvents(
@@ -123,6 +154,11 @@ const CalendarPage: React.FC = () => {
     setModalOpen(false);
   };
 
+  /**
+   * Delete the currently edited event (when modal is open).
+   * Note: the list delete button calls this too; ensure `editingEvent` is set first.
+   * (Alternative approach: pass an id to delete and avoid relying on editing state.)
+   */
   const handleDelete = async () => {
     if (!user || !editingEvent) {
       alert("Please log in to delete events.");
@@ -142,9 +178,14 @@ const CalendarPage: React.FC = () => {
     setModalOpen(false);
   };
 
+  /**
+   * Mark calendar tiles that have events.
+   * Comparison uses the normalized "YYYY-MM-DD" string.
+   */
   const isEventDay = (d: Date) =>
     events.some(e => e.date === d.toISOString().split("T")[0]);
 
+  // Loading skeleton while fetching the user's events
   if (loading) {
     return (
       <Box sx={{ p: 8 }}>
@@ -153,6 +194,7 @@ const CalendarPage: React.FC = () => {
     );
   }
 
+  // Auth guard for the page (also enforced by your protected routes)
   if (!user) {
     return (
       <Box sx={{ p: 8 }}>
@@ -167,7 +209,7 @@ const CalendarPage: React.FC = () => {
         Calendar
       </Typography>
 
-      {/* Calendar widget */}
+      {/* Calendar grid with click-to-add/edit */}
       <Paper elevation={3} sx={{ maxWidth: 640, mx: "auto", p: 2 }}>
         <Calendar
           onChange={setDate}
@@ -177,13 +219,14 @@ const CalendarPage: React.FC = () => {
         />
       </Paper>
 
+      {/* Selected date summary */}
       <Typography sx={{ mt: 2 }}>
         Selected Date: {Array.isArray(date)
           ? date.map(d => (d as Date).toLocaleDateString()).join(" – ")
           : (date as Date).toLocaleDateString()}
       </Typography>
 
-      {/* Readable list of events */}
+      {/* Event list (sorted ascending by date) */}
       <Box sx={{ mt: 6, maxWidth: 640, mx: "auto", textAlign: "left" }}>
         <Typography variant="h5" gutterBottom>
           My Events
@@ -201,9 +244,11 @@ const CalendarPage: React.FC = () => {
                   key={ev.id}
                   secondaryAction={
                     <>
+                      {/* Open prefilled editor for this item */}
                       <IconButton edge="end" onClick={() => openForEdit(ev)}>
                         <EditIcon />
                       </IconButton>
+                      {/* This button calls handleDelete; ensure editingEvent is set (e.g., via modal) before deleting */}
                       <IconButton edge="end" onClick={handleDelete}>
                         <DeleteIcon />
                       </IconButton>
@@ -213,6 +258,7 @@ const CalendarPage: React.FC = () => {
                   <ListItemText
                     primary={ev.title}
                     secondary={
+                      // Render "YYYY-MM-DD" as a local Date without timezone shifts
                       new Date(
                         ...ev.date.split("-").map((v, i) =>
                           i === 1 ? Number(v) - 1 : Number(v)
@@ -226,10 +272,10 @@ const CalendarPage: React.FC = () => {
         )}
       </Box>
 
-      {/* Modal for add/edit */}
+      {/* Add/Edit modal for the selected date */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>
-          {editingEvent ? "Edit Event" : "Add Event"} – {" "}
+          {editingEvent ? "Edit Event" : "Add Event"} –{" "}
           {(date as Date).toLocaleDateString()}
         </DialogTitle>
         <DialogContent>
@@ -255,6 +301,7 @@ const CalendarPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Calendar day highlight */}
       <style>{`
         .event-day {
           background: #ffcc00 !important;
@@ -265,4 +312,4 @@ const CalendarPage: React.FC = () => {
   );
 };
 
-export default CalendarPage;
+export default CalendarPage;3

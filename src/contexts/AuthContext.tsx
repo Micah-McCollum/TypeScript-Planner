@@ -4,8 +4,20 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, User, signOut } from "firebase/auth";
 import { loginUser, registerUser } from "@utils/firestore";
 
-// AuthContext handles the majority of User-state tracking, 
-interface AuthContextType {
+/**
+ * AuthContext.tsx
+ *
+ * Thin wrapper around Firebase Auth that provides:
+ * - `user`: the current Firebase user (or null)
+ * - `loading`: true until the initial auth state resolves
+ * - `signUp(email, password)`: create a new auth user (delegates to utils)
+ * - `signIn(email, password)`: sign in an existing user (delegates to utils)
+ * - `signOutUser()`: sign out and clear local state
+ *
+ * Usage: wrap your app with `<AuthProvider>` and call `useAuth()` in children
+ */
+
+  interface AuthContextType {
   user: User | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<User>;

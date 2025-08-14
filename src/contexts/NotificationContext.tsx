@@ -5,6 +5,16 @@ import { notificationsCollection } from "@utils/firestore";
 import { useAuth } from "./AuthContext";
 import { FirebaseError } from "firebase/app";
 
+/**
+ * NotificationContext.tsx
+ *
+ * Provides real-time, per-user notifications from Firestore to the UI.
+ * Features: subscribes to **unread** notifications for the current user, exposes
+ *           `unreadCount`, and a `markRead(id)` helper.
+ * Dependencies: must be wrapped by `<AuthProvider>`; requires a valid
+ *               `notificationsCollection` Firestore CollectionReference.
+ */
+
 type Notification = {
   id: string;
   title: string;

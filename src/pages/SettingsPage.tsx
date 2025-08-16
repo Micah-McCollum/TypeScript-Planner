@@ -3,6 +3,7 @@ import { useAuth } from "@contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 // Settings page for User allowing logging out of profile, then directs to the login page
+// Optional collection built in firestore not currently used
 
 const SettingsPage: React.FC = () => {
   const { signOutUser, user } = useAuth();

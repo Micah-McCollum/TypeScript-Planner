@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@contexts/AuthContext";
 
 // Protected routing used for only when a User is logged into account
+// Reveals certain pages only if User is authenticated
 interface ProtectedRouteProps {
   children: JSX.Element;
 }

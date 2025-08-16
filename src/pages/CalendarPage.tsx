@@ -21,7 +21,7 @@ import { FirebaseError } from "firebase/app";
  */
 
 // Event shape used across UI and Firestore mapping.
-// ` date` is stored as a local, calendar-only string: "YYYY-MM-DD"
+// `date` is stored as a local, calendar-only string: "YYYY-MM-DD"
 interface Event {
   id: string;
   date: string; // "YYYY-MM-DD"
